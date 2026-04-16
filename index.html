@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SW School Hub</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 400px; width: 100%; }
+        
+        /* สไตล์สถานะการเชื่อมต่อ */
+        .status-bar { background: white; padding: 10px 15px; border-radius: 50px; display: flex; align-items: center; font-size: 14px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 10px; }
+        .status-online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-offline { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box; text-align: center; }
+        h2 { color: #333; margin-bottom: 25px; }
+        
+        /* สไตล์ปุ่ม */
+        .btn { display: flex; align-items: center; justify-content: center; padding: 15px; margin: 12px 0; border-radius: 12px; text-decoration: none; font-weight: 600; transition: transform 0.2s; color: white; }
+        .btn:active { transform: scale(0.98); }
+        .btn-link { background: var(--primary); }
+        .btn-call { background: var(--success); }
+        .icon { margin-right: 10px; font-size: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="status-bar">
+            <span id="status-dot" class="dot status-offline"></span>
+            <span id="status-text">กำลังเชื่อมต่อ Firebase...</span>
+        </div>
+
+        <div class="card">
+            <h2>School Hub (SW)</h2>
+            
+            <a href="https://google.com" class="btn btn-link">
+                <span class="icon">🌐</span> เว็บไซต์โรงเรียน
+            </a>
+            
+            <a href="#" class="btn btn-link" style="background: #6f42c1;">
+                <span class="icon">🏆</span> ระบบ SW Olympic
+            </a>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+            <p style="color: #666; font-size: 14px;">ติดต่อสอบถาม</p>
+            <a href="tel:0812345678" class="btn btn-call">
+                <span class="icon">📞</span> โทรหาห้องธุรการ
+            </a>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Config ของคุณครู
+        const firebaseConfig = {
+            apiKey: "AIzaSyBPCmMjQzcqb90ZZ71v0xizoTAQiAxRigY",
+            authDomain: "vvvv-c8315.firebaseapp.com",
+            projectId: "vvvv-c8315",
+            storageBucket: "vvvv-c8315.firebasestorage.app",
+            messagingSenderId: "46923850026",
+            appId: "1:46923850026:web:7e28d805684c5e5b9c3e53",
+            measurementId: "G-NZR6YX8YCH"
+        };
+
+        // เริ่มต้น Firebase
+        try {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            
+            // ถ้ามาถึงตรงนี้แสดงว่า Config ถูกต้อง
+            document.getElementById('status-dot').className = 'dot status-online';
+            document.getElementById('status-text').innerText = 'Firebase Connected';
+            console.log("Firebase connected successfully!");
+        } catch (error) {
+            document.getElementById('status-dot').className = 'dot status-offline';
+            document.getElementById('status-text').innerText = 'Connection Error';
+            console.error("Firebase connection failed:", error);
+        }
+
+        // ลงทะเบียน Service Worker สำหรับ PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
+</body>
+</html>
