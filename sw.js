@@ -1,3 +1,18 @@
-self.addEventListener('fetch', function(event) {
-    // โค้ดว่างๆ นี้เพื่อให้ Browser ยอมรับว่าเป็น PWA
+const CACHE_NAME = 'sw-hub-v1';
+const urlsToCache = [
+  './',
+  './index.html',
+  './manifest.json'
+];
+
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
+  );
 });
