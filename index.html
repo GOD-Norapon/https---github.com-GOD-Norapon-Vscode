@@ -3,95 +3,798 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SW School Hub 02</title>
-    <link rel="manifest" href="manifest.json">
+    <title>A-Level Performance Dashboard</title>
+    <!-- Tailwind CSS & Google Fonts (Sarabun) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js & FontAwesome Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        :root {
-            --primary: #007bff;
-            --success: #28a745;
-            --danger: #dc3545;
+        body { 
+            font-family: 'Sarabun', sans-serif; 
+            background-color: #f8fafc; 
+            color: #1e293b; 
+            margin: 0; 
+            padding: 0; 
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { max-width: 400px; width: 100%; }
-        
-        /* สไตล์สถานะการเชื่อมต่อ */
-        .status-bar { background: white; padding: 10px 15px; border-radius: 50px; display: flex; align-items: center; font-size: 14px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .dot { height: 10px; width: 10px; border-radius: 50%; display: inline-block; margin-right: 10px; }
-        .status-online { background-color: var(--success); box-shadow: 0 0 8px var(--success); }
-        .status-offline { background-color: var(--danger); box-shadow: 0 0 8px var(--danger); }
-
-        .card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); width: 100%; box-sizing: border-box; text-align: center; }
-        h2 { color: #333; margin-bottom: 25px; }
-        
-        /* สไตล์ปุ่ม */
-        .btn { display: flex; align-items: center; justify-content: center; padding: 15px; margin: 12px 0; border-radius: 12px; text-decoration: none; font-weight: 600; transition: transform 0.2s; color: white; }
-        .btn:active { transform: scale(0.98); }
-        .btn-link { background: var(--primary); }
-        .btn-call { background: var(--success); }
-        .icon { margin-right: 10px; font-size: 20px; }
+        .slide-container { 
+            width: 100%; 
+            min-height: 100vh; 
+            padding: 2rem; 
+            position: relative; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: hidden; 
+        }
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.9); 
+            backdrop-filter: blur(10px); 
+            border: 1px solid rgba(226, 232, 240, 0.8); 
+            border-radius: 1.5rem; 
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05); 
+        }
+        .nav-btn { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-radius: 1rem; 
+            padding: 0.75rem 1.5rem; 
+            font-weight: 600; 
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64748b;
+        }
+        .nav-btn.active { 
+            background-color: #4f46e5; 
+            color: #ffffff; 
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+        }
+        .nav-btn:not(.active):hover {
+            background-color: #f1f5f9;
+            color: #4f46e5;
+        }
+        canvas { 
+            max-height: 400px !important; 
+        }
+        .loader { 
+            border: 3px solid #f3f3f3; 
+            border-top: 3px solid #4f46e5; 
+            border-radius: 50%; 
+            width: 24px; 
+            height: 24px; 
+            animation: spin 1s linear infinite; 
+            display: inline-block; 
+            vertical-align: middle; 
+        }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
     </style>
 </head>
 <body>
+    <div class="slide-container">
+        <!-- Header & Nav -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 border-b border-slate-100 pb-6">
+            <div class="flex items-center gap-4">
+                <div class="bg-gradient-to-tr from-indigo-600 to-violet-500 p-3 rounded-2xl shadow-lg shadow-indigo-100 text-white">
+                    <i class="fa-solid fa-square-poll-vertical text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800 tracking-tight leading-tight">A-Level Analyst Platform</h1>
+                    <p class="text-slate-500 text-sm font-medium">ระบบรายงานพัฒนาการและวิเคราะห์ผลคะแนนสอบแบบแยกแท็บ</p>
+                </div>
+            </div>
+            <nav class="flex flex-wrap gap-2 glass-card p-1.5 shadow-sm">
+                <button id="btn-individual" class="nav-btn active" onclick="switchView('individual')">
+                    <i class="fa-solid fa-user-chart text-sm"></i>วิเคราะห์รายบุคคล
+                </button>
+                <button id="btn-pre-stats" class="nav-btn" onclick="switchView('pre-stats')">
+                    <i class="fa-solid fa-chart-line text-sm"></i>สถิติ Pre-A level
+                </button>
+                <button id="btn-overview" class="nav-btn" onclick="switchView('overview')">
+                    <i class="fa-solid fa-chart-line-up text-sm"></i>ภาพรวมวิชาการ (A-Level)
+                </button>
+            </nav>
+        </header>
 
-    <div class="container">
-        <div class="status-bar">
-            <span id="status-dot" class="dot status-offline"></span>
-            <span id="status-text">กำลังเชื่อมต่อ Firebase...</span>
+        <!-- API URL Notice Alert (GitHub Deployment guide) -->
+        <div id="api-url-notice" class="hidden bg-amber-50 border-l-4 border-l-amber-500 p-4 rounded-xl text-amber-800 text-xs mb-6">
+            <p class="font-bold flex items-center gap-1"><i class="fa-solid fa-circle-info"></i> แจ้งเตือน GitHub Deployment:</p>
+            <p class="mt-1">โปรดกรอก URL ที่ได้จากขั้นตอนการ Deploy Web App ใน Google Apps Script ลงในตัวแปร <code class="bg-amber-100 px-1.5 py-0.5 rounded font-mono font-bold">GAS_API_URL</code> ด้านในโค้ดของไฟล์นี้ก่อน เพื่อให้เว็บบน GitHub ดึงข้อมูลจากชีตจริงได้ครับ</p>
         </div>
 
-        <div class="card">
-            <h2>School Hub (02)</h2>
-            
-            <a href="https://google.com" class="btn btn-link">
-                <span class="icon">🌐</span> เว็บไซต์โรงเรียน
-            </a>
-            
-            <a href="#" class="btn btn-link" style="background: #6f42c1;">
-                <span class="icon">🏆</span> ระบบ SW Olympic
-            </a>
+        <!-- View: Individual -->
+        <section id="view-individual" class="space-y-6">
+            <!-- Selector Container -->
+            <div class="glass-card p-6">
+                <div class="relative">
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">เลือกรายชื่อนักเรียนเพื่อวิเคราะห์ผลการเรียน</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-users absolute left-4 top-1/2 -translate-y-1/2 text-indigo-600 text-lg"></i>
+                        <select id="select-student" onchange="onStudentSelect(this.value)" class="w-full pl-12 pr-10 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all appearance-none text-slate-700 font-medium">
+                            <option value="">-- ดึงข้อมูลรายชื่อจากฐานข้อมูล... --</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm"></i>
+                    </div>
+                </div>
+            </div>
 
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+            <!-- Loading Spinner Indicator -->
+            <div id="search-loading" class="hidden text-center p-12">
+                <div class="loader mb-2"></div>
+                <p class="text-sm text-slate-500 font-medium">กำลังดำเนินการประมวลผลข้อมูลคะแนน...</p>
+            </div>
 
-            <p style="color: #666; font-size: 14px;">ติดต่อสอบถาม</p>
-            <a href="tel:0812345678" class="btn btn-call">
-                <span class="icon">📞</span> โทรหาห้องธุรการ
-            </a>
-        </div>
+            <!-- Global Page Alert Messages -->
+            <div id="alert-message" class="hidden glass-card p-4 border-l-4 border-l-rose-500 bg-rose-50 text-rose-700 flex items-center gap-3">
+                <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                <span id="alert-text" class="text-sm font-medium">ไม่พบข้อมูลกรุณาลองใหม่อีกครั้ง</span>
+            </div>
+
+            <!-- Empty Welcome State -->
+            <div id="empty-state" class="glass-card p-12 text-center text-slate-400">
+                <i class="fa-solid fa-id-card-clip text-5xl mb-4 text-slate-300"></i>
+                <h3 class="text-lg font-bold text-slate-700 mb-1">กรุณาเลือกรายชื่อนักเรียนเพื่อเริ่มต้นใช้งาน</h3>
+                <p class="text-sm text-slate-500">คลิกเลือกชื่อนักเรียนด้านบนเพื่อประเมินวิเคราะห์กราฟแท่งพัฒนาการความก้าวหน้าและการเติบโตรายวิชา</p>
+            </div>
+
+            <!-- Student Analysis Result Area -->
+            <div id="student-result" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Info Profile Card Column -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="glass-card p-6 text-center relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl"></div>
+                        <div class="relative z-10 py-2">
+                            <h2 id="res-name" class="text-2xl font-bold text-slate-800 mb-1">ชื่อนักเรียน</h2>
+                            <p id="res-id" class="text-indigo-600 font-semibold text-sm mb-4">ID: 00000</p>
+                            <hr class="border-slate-100 mb-4">
+                            
+                            <!-- KPI Badges -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100/50">
+                                    <p class="text-[10px] uppercase font-bold text-slate-400 mb-1">คะแนนรวมสอบจริง</p>
+                                    <p id="res-max" class="text-xl font-extrabold text-indigo-600">0</p>
+                                    <p class="text-[9px] text-slate-400 font-medium mt-0.5 truncate">เต็ม 700 คะแนน</p>
+                                </div>
+                                <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100/50">
+                                    <p class="text-[10px] uppercase font-bold text-slate-400 mb-1">พัฒนาการรวม</p>
+                                    <p id="res-trend" class="text-xl font-extrabold text-emerald-600">+0%</p>
+                                    <p class="text-[9px] text-slate-400 font-medium mt-0.5">เทียบ Baseline ล่าสุด</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Score Table -->
+                    <div class="glass-card p-6 overflow-hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-700 flex items-center gap-2">
+                                <i class="fa-solid fa-table-list text-indigo-500"></i>ตารางรายงานคะแนนรายวิชา
+                            </h3>
+                            <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded-md font-bold">เต็ม 100</span>
+                        </div>
+                        <p class="text-[10px] text-amber-600 mb-2 italic">* หากวิชานั้นๆ คะแนน Pre 2 เป็น 0 ระบบจะคิดคะแนนเปรียบเทียบจาก Pre 1 แทนอัตโนมัติ</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-slate-50 text-slate-500 text-left">
+                                    <tr>
+                                        <th class="p-3 font-bold text-xs rounded-l-xl">วิชา</th>
+                                        <th class="p-3 font-bold text-xs text-center">Pre 1</th>
+                                        <th class="p-3 font-bold text-xs text-center">Pre 2</th>
+                                        <th class="p-3 font-bold text-xs text-center">สอบจริง</th>
+                                        <th class="p-3 font-bold text-xs text-center rounded-r-xl">พัฒนาการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-scores" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chart Graph Dashboard Column (Bar Chart) -->
+                <div class="lg:col-span-8">
+                    <div class="glass-card p-6 md:p-8 h-full flex flex-col justify-between">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i class="fa-solid fa-chart-column text-indigo-500"></i>กราฟเปรียบเทียบพัฒนาการรายวิชาและส่วนต่างคะแนน
+                            </h3>
+                            <p class="text-slate-400 text-xs mt-1">แสดงผลคะแนนสอบแยกแต่ละรอบและระบุค่าความเปลี่ยนแปลงของส่วนต่าง $\Delta$ ระหว่างรอบที่เหมาะสมกับสอบจริง</p>
+                        </div>
+                        <div class="flex-1 relative min-h-[300px]">
+                            <canvas id="studentTrendChart"></canvas>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-100 grid grid-cols-3 text-center text-xs text-slate-500">
+                            <div><span class="inline-block w-2.5 h-2.5 bg-cyan-500 rounded-full mr-1.5"></span>Pre 1 (รอบแรกสุด)</div>
+                            <div><span class="inline-block w-2.5 h-2.5 bg-orange-500 rounded-full mr-1.5"></span>Pre 2 (รอบสอง)</div>
+                            <div><span class="inline-block w-2.5 h-2.5 bg-violet-500 rounded-full mr-1.5"></span>สอบจริง A-Level</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Pre-A level Statistics -->
+        <section id="view-pre-stats" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Pre Stats Data Table -->
+                <div class="lg:col-span-5 glass-card p-6 overflow-hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-violet-600"></i>สถิติสรุปเปรียบเทียบ Pre 1 vs Pre 2
+                        </h3>
+                    </div>
+                    <p class="text-slate-400 text-xs mb-4 italic">* ไม่คิดคะแนนเป็น 0 ในการคำนวณ เพื่อสถิติที่ตรงความเป็นจริงของกลุ่มนักเรียนที่เข้าสอบจริงในแต่ละรอบ</p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-left">
+                                <tr>
+                                    <th class="p-3 font-bold text-xs rounded-l-xl">วิชา</th>
+                                    <th class="p-3 font-bold text-xs text-center">เฉลี่ย Pre 1 (จำนวนคน)</th>
+                                    <th class="p-3 font-bold text-xs text-center">เฉลี่ย Pre 2 (จำนวนคน)</th>
+                                    <th class="p-3 font-bold text-xs text-center rounded-r-xl">การเติบโต ($\Delta$)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-pre-stats" class="divide-y divide-slate-100">
+                                <!-- Dynamic Rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Pre Stats Graph Column -->
+                <div class="lg:col-span-7 glass-card p-6 md:p-8 flex flex-col justify-between">
+                    <div class="mb-4">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-chart-simple text-violet-600"></i>กราฟแสดงแนวโน้มความเปลี่ยนแปลงเฉลี่ยสถิติพรีเทส
+                        </h3>
+                        <p class="text-slate-400 text-xs mt-1">วิเคราะห์แนวโน้มคะแนนเฉลี่ยระหว่าง Pre 1 และ Pre 2 เพื่อประเมินและปรับรูปแบบการจัดการเรียนรู้ของครูผู้สอนก่อนจัดสอบจริง</p>
+                    </div>
+                    <div class="flex-1 relative min-h-[300px]">
+                        <canvas id="preStatsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Overview -->
+        <section id="view-overview" class="hidden space-y-6">
+            <!-- Summary KPI Grid Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-card p-6 flex items-center gap-4 border-l-4 border-l-indigo-600">
+                    <div class="bg-indigo-100 p-4 rounded-xl text-indigo-600"><i class="fa-solid fa-users text-xl"></i></div>
+                    <div>
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">นักเรียนในห้องเรียน</p>
+                        <h4 id="ov-count" class="text-2xl font-bold text-slate-800">0 คน</h4>
+                    </div>
+                </div>
+                <div class="glass-card p-6 flex items-center gap-4 border-l-4 border-l-emerald-500">
+                    <div class="bg-emerald-100 p-4 rounded-xl text-emerald-600"><i class="fa-solid fa-crown text-xl"></i></div>
+                    <div>
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">วิชาที่ค่าเฉลี่ยจริงสูงสุด</p>
+                        <h4 id="ov-top-sub" class="text-2xl font-bold text-slate-800">-</h4>
+                    </div>
+                </div>
+                <div class="glass-card p-6 flex items-center gap-4 border-l-4 border-l-amber-500">
+                    <div class="bg-amber-100 p-4 rounded-xl text-amber-600"><i class="fa-solid fa-trending-up text-xl"></i></div>
+                    <div>
+                        <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">คะแนนสอบจริงเฉลี่ยรวม 7 วิชา</p>
+                        <h4 id="ov-avg-total" class="text-2xl font-bold text-slate-800">0.0 คะแนน</h4>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Global Overview Chart Card (Bright Colors) -->
+            <div class="glass-card p-6 md:p-8">
+                <div class="mb-6 flex justify-between items-start md:items-center flex-col md:flex-row gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800">คะแนนเฉลี่ยระดับห้องเรียนเปรียบเทียบในแต่ละรอบ</h3>
+                        <p class="text-slate-400 text-xs mt-1">วิเคราะห์แนวโน้มผลสัมฤทธิ์ทางการศึกษาแบบภาพรวมทั้งห้องเรียน 7 วิชา</p>
+                    </div>
+                    <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg">กลุ่มเป้าหมาย: นักเรียนทั้งหมดในห้องเรียน</span>
+                </div>
+                <div class="relative w-full h-[400px]">
+                    <canvas id="overviewBarChart"></canvas>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    <!-- Script Handling Mock Data for Preview & Apps Script Calls -->
+    <script>
+        // ==========================================
+        // 🚨 CONFIGURATION FOR GITHUB DEPLOYMENT:
+        // หากต้องการอัปโหลดและเปิดผ่าน GitHub Pages 
+        // ให้คัดลอก URL Web App ที่ได้จากการ Deploy Google Apps Script มาวางในตัวแปรนี้ครับ
+        // เช่น: "https://script.google.com/macros/s/xxxx/exec"
+        const GAS_API_URL = ""; 
+        // ==========================================
 
-        // Config ของคุณครู
-        const firebaseConfig = {
-            apiKey: "AIzaSyBPCmMjQzcqb90ZZ71v0xizoTAQiAxRigY",
-            authDomain: "vvvv-c8315.firebaseapp.com",
-            projectId: "vvvv-c8315",
-            storageBucket: "vvvv-c8315.firebasestorage.app",
-            messagingSenderId: "46923850026",
-            appId: "1:46923850026:web:7e28d805684c5e5b9c3e53",
-            measurementId: "G-NZR6YX8YCH"
-        };
+        let sChart = null;
+        let oChart = null;
+        let pChart = null;
+        let isGas = typeof google !== 'undefined' && google.script && google.script.run;
 
-        // เริ่มต้น Firebase
-        try {
-            const app = initializeApp(firebaseConfig);
-            const db = getFirestore(app);
-            
-            // ถ้ามาถึงตรงนี้แสดงว่า Config ถูกต้อง
-            document.getElementById('status-dot').className = 'dot status-online';
-            document.getElementById('status-text').innerText = 'Firebase Connected';
-            console.log("Firebase connected successfully!");
-        } catch (error) {
-            document.getElementById('status-dot').className = 'dot status-offline';
-            document.getElementById('status-text').innerText = 'Connection Error';
-            console.error("Firebase connection failed:", error);
+        // เช็คและแสดงคู่มือการตั้งค่า GitHub API
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '' && !isGas && !GAS_API_URL) {
+            document.getElementById('api-url-notice').classList.remove('hidden');
         }
 
-        // ลงทะเบียน Service Worker สำหรับ PWA
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        // Offline Mock Database (สำหรับ Sandbox / Preview และทดสอบการแสดงผลได้อย่างรวดเร็ว)
+        const mockDatabase = {
+            "32304": {
+                id: "32304",
+                name: "นางสาวราธิชา สุขภิรมย์",
+                scores: [
+                    { subject: "คณิตศาสตร์ประยุกต์ 1", pre1: 30, pre2: 0, actual: 41 }, // คะแนน Pre2 เป็น 0 (จะสลับคิด delta จาก Pre1)
+                    { subject: "ฟิสิกส์", pre1: 35, pre2: 38, actual: 41 },
+                    { subject: "เคมี", pre1: 32, pre2: 36, actual: 40 },
+                    { subject: "ชีววิทยา", pre1: 50, pre2: 0, actual: 64 }, // คะแนน Pre2 เป็น 0 (จะสลับคิด delta จาก Pre1)
+                    { subject: "สังคมศึกษา", pre1: 45, pre2: 48, actual: 52 },
+                    { subject: "ภาษาไทย", pre1: 58, pre2: 60, actual: 66 },
+                    { subject: "ภาษาอังกฤษ", pre1: 70, pre2: 72, actual: 78.75 }
+                ]
+            },
+            "32305": {
+                id: "32305",
+                name: "นายปรีชา สุขใจ",
+                scores: [
+                    { subject: "คณิตศาสตร์ประยุกต์ 1", pre1: 45, pre2: 52, actual: 61 },
+                    { subject: "ฟิสิกส์", pre1: 40, pre2: 48, actual: 55 },
+                    { subject: "เคมี", pre1: 38, pre2: 42, actual: 50 },
+                    { subject: "ชีววิทยา", pre1: 60, pre2: 64, actual: 72 },
+                    { subject: "สังคมศึกษา", pre1: 52, pre2: 58, actual: 64 },
+                    { subject: "ภาษาไทย", pre1: 65, pre2: 70, actual: 78 },
+                    { subject: "ภาษาอังกฤษ", pre1: 68, pre2: 74, actual: 82 }
+                ]
+            }
+        };
+
+        const mockOverview = {
+            studentCount: 12,
+            averages: [
+                { subject: "คณิตศาสตร์ประยุกต์ 1", pre1: "35.5", pre2: "41.2", actual: "49.5" },
+                { subject: "ฟิสิกส์", pre1: "37.1", pre2: "42.0", actual: "48.9" },
+                { subject: "เคมี", pre1: "35.0", pre2: "40.5", actual: "47.2" },
+                { subject: "ชีววิทยา", pre1: "54.2", pre2: "59.8", actual: "67.0" },
+                { subject: "สังคมศึกษา", pre1: "48.0", pre2: "53.2", actual: "59.5" },
+                { subject: "ภาษาไทย", pre1: "61.5", pre2: "66.0", actual: "72.4" },
+                { subject: "ภาษาอังกฤษ", pre1: "66.8", pre2: "71.5", actual: "78.2" }
+            ]
+        };
+
+        const mockPreStats = [
+            { subject: "คณิตศาสตร์ประยุกต์ 1", pre1Avg: "38.50", pre1Count: 12, pre2Avg: "44.20", pre2Count: 11, diff: "5.70" },
+            { subject: "ฟิสิกส์", pre1Avg: "35.10", pre1Count: 10, pre2Avg: "42.00", pre2Count: 12, diff: "6.90" },
+            { subject: "เคมี", pre1Avg: "36.20", pre1Count: 11, pre2Avg: "39.80", pre2Count: 11, diff: "3.60" },
+            { subject: "ชีววิทยา", pre1Avg: "52.40", pre1Count: 12, pre2Avg: "58.10", pre2Count: 12, diff: "5.70" },
+            { subject: "สังคมศึกษา", pre1Avg: "46.80", pre1Count: 12, pre2Avg: "52.30", pre2Count: 12, diff: "5.50" },
+            { subject: "ภาษาไทย", pre1Avg: "60.20", pre1Count: 12, pre2Avg: "65.50", pre2Count: 12, diff: "5.30" },
+            { subject: "ภาษาอังกฤษ", pre1Avg: "64.50", pre1Count: 12, pre2Avg: "70.10", pre2Count: 12, diff: "5.60" }
+        ];
+
+        // ฟังก์ชันจำลอง / ดึงข้อมูลแบบ Hybrid เพื่อให้รันได้ทั้งสองสภาพแวดล้อม (CORS fetch vs google.script.run)
+        function callApi(action, paramVal = null) {
+            const isGasEnvironment = typeof google !== 'undefined' && google.script && google.script.run;
+            
+            if (isGasEnvironment && !GAS_API_URL) {
+                return new Promise((resolve, reject) => {
+                    const runner = google.script.run
+                        .withSuccessHandler(resolve)
+                        .withFailureHandler(err => {
+                            console.error(err);
+                            reject(err);
+                        });
+                    
+                    if (action === 'getStudentList') runner.getStudentList();
+                    else if (action === 'getStudentData') runner.getStudentData(paramVal);
+                    else if (action === 'getOverviewData') runner.getOverviewData();
+                    else if (action === 'getPreStatsData') runner.getPreStatsData();
+                });
+            } else {
+                // หากรันภายนอกหรือ GitHub Pages และมีการระบุ API URL
+                if (!GAS_API_URL) {
+                    // หากยังไม่ได้ผูก URL ระบบจะคืนค่าข้อมูล Mockup อัตโนมัติสำหรับการพรีวิว
+                    if (action === 'getStudentList') {
+                        return Promise.resolve(Object.keys(mockDatabase).map(k => ({ id: k, name: mockDatabase[k].name })));
+                    } else if (action === 'getStudentData') {
+                        return Promise.resolve(mockDatabase[paramVal] || null);
+                    } else if (action === 'getOverviewData') {
+                        return Promise.resolve(mockOverview);
+                    } else if (action === 'getPreStatsData') {
+                        return Promise.resolve(mockPreStats);
+                    }
+                }
+                
+                // เรียกข้อมูลจริงจาก Google Sheets ด้วย CORS fetch
+                let url = `${GAS_API_URL}?action=${action}`;
+                if (paramVal && action === 'getStudentData') {
+                    url += `&id=${encodeURIComponent(paramVal)}`;
+                }
+                
+                return fetch(url)
+                    .then(res => res.json())
+                    .catch(err => {
+                        console.error("API Call error:", err);
+                        return null;
+                    });
+            }
+        }
+
+        // โหลดรายชื่อนักเรียนเมื่อหน้าจอเปิดขึ้น
+        window.onload = function() {
+            loadStudentList();
+        };
+
+        function loadStudentList() {
+            callApi('getStudentList').then(populateDropdown);
+        }
+
+        function populateDropdown(list) {
+            const dropdown = document.getElementById('select-student');
+            dropdown.innerHTML = '<option value="">-- เลือกรายชื่อนักเรียนเพื่อวิเคราะห์ผล --</option>';
+            if (!list || list.length === 0) {
+                dropdown.innerHTML = '<option value="">❌ ดึงข้อมูลล้มเหลว หรือไม่มีข้อมูลนักเรียน</option>';
+                return;
+            }
+            list.forEach(student => {
+                const opt = document.createElement('option');
+                opt.value = student.id;
+                opt.textContent = `${student.id} - ${student.name}`;
+                dropdown.appendChild(opt);
+            });
+        }
+
+        function onStudentSelect(id) {
+            if (!id) return;
+            triggerFetch(id);
+        }
+
+        function switchView(view) {
+            document.querySelectorAll('section').forEach(s => s.classList.add('hidden'));
+            document.getElementById('view-' + view).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + view).classList.add('active');
+
+            if (view === 'overview') loadOverview();
+            if (view === 'pre-stats') loadPreStats();
+        }
+
+        function triggerFetch(id) {
+            document.getElementById('search-loading').classList.remove('hidden');
+            document.getElementById('student-result').classList.add('hidden');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('alert-message').classList.add('hidden');
+            
+            callApi('getStudentData', id).then(showStudent);
+        }
+
+        function showStudent(data) {
+            document.getElementById('search-loading').classList.add('hidden');
+            
+            if (!data) { 
+                document.getElementById('alert-message').classList.remove('hidden');
+                document.getElementById('alert-text').innerText = "ไม่พบข้อมูลคะแนนนักเรียนรายบุคคลนี้ในฐานข้อมูล Google Sheets";
+                document.getElementById('empty-state').classList.remove('hidden');
+                return; 
+            }
+            
+            document.getElementById('student-result').classList.remove('hidden');
+            document.getElementById('res-name').innerText = data.name;
+            document.getElementById('res-id').innerText = "ID: " + data.id;
+            
+            // 1. คำนวณคะแนนรวมดิบทุกวิชาโดยอัติโนมัติ
+            const totalPre1 = data.scores.reduce((sum, s) => sum + Number(s.pre1 || 0), 0);
+            const totalPre2 = data.scores.reduce((sum, s) => sum + Number(s.pre2 || 0), 0);
+            const totalActual = data.scores.reduce((sum, s) => sum + Number(s.actual || 0), 0);
+            
+            document.getElementById('res-max').innerText = totalActual.toFixed(1);
+            
+            // 2. คำนวณผลต่างพัฒนาการรวมโดยใช้เงื่อนไข Fallback (ถ้า Pre2 เป็น 0 ให้คิดจาก Pre1 เสมอ)
+            let totalBaseline = 0;
+            let totalDelta = 0;
+            
+            data.scores.forEach(s => {
+                const hasPre2 = (s.pre2 !== 0 && s.pre2 !== "" && s.pre2 !== null);
+                const baseline = hasPre2 ? s.pre2 : s.pre1;
+                totalBaseline += baseline;
+                totalDelta += (s.actual - baseline);
+            });
+            
+            const trendEl = document.getElementById('res-trend');
+            trendEl.innerText = (totalDelta >= 0 ? "+" : "") + totalDelta.toFixed(1) + " คะแนน";
+            trendEl.className = totalDelta >= 0 ? "text-xl font-extrabold text-emerald-600" : "text-xl font-extrabold text-rose-500";
+            
+            // วาดข้อมูลในตารางผลคะแนนดิบรายบุคคล
+            const tbody = document.getElementById('table-scores');
+            
+            let tableRowsHtml = data.scores.map(s => {
+                const hasPre2 = (s.pre2 !== 0 && s.pre2 !== "" && s.pre2 !== null);
+                const baseline = hasPre2 ? s.pre2 : s.pre1;
+                const growth = (s.actual - baseline).toFixed(1);
+                const growthNum = parseFloat(growth);
+                let growthBadge = "";
+                
+                if (growthNum > 0) {
+                    growthBadge = `<span class="inline-flex items-center gap-1 font-bold text-emerald-600"><i class="fa-solid fa-circle-chevron-up"></i>+${growth}</span>`;
+                } else if (growthNum < 0) {
+                    growthBadge = `<span class="inline-flex items-center gap-1 font-bold text-rose-500"><i class="fa-solid fa-circle-chevron-down"></i>${growth}</span>`;
+                } else {
+                    growthBadge = `<span class="text-slate-400 font-semibold">-</span>`;
+                }
+
+                const pre2Display = hasPre2 ? s.pre2 : `<span class="text-amber-500 font-bold" title="เนื่องจากรอบสองเป็น 0 จึงเปรียบเทียบเทียบรอบ 1">${s.pre2} *</span>`;
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-3 text-slate-700 font-medium">${s.subject}</td>
+                        <td class="p-3 text-center text-slate-500">${s.pre1}</td>
+                        <td class="p-3 text-center text-slate-500">${pre2Display}</td>
+                        <td class="p-3 text-center font-bold text-slate-800 bg-slate-50/50">${s.actual}</td>
+                        <td class="p-3 text-center text-xs">${growthBadge}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // แถวสรุปคะแนนรวมทุกวิชาแบบไดนามิก
+            let totalGrowthBadge = "";
+            if (totalDelta > 0) {
+                totalGrowthBadge = `<span class="inline-flex items-center gap-1 font-bold text-emerald-600"><i class="fa-solid fa-circle-chevron-up"></i>+${totalDelta.toFixed(1)}</span>`;
+            } else if (totalDelta < 0) {
+                totalGrowthBadge = `<span class="inline-flex items-center gap-1 font-bold text-rose-500"><i class="fa-solid fa-circle-chevron-down"></i>${totalDelta.toFixed(1)}</span>`;
+            } else {
+                totalGrowthBadge = `<span class="text-slate-400 font-semibold">-</span>`;
+            }
+
+            tableRowsHtml += `
+                <tr class="bg-indigo-50/70 font-bold border-t-2 border-slate-200">
+                    <td class="p-3 text-indigo-900 font-bold">รวมทุกวิชา (Total)</td>
+                    <td class="p-3 text-center text-indigo-900 font-bold">${totalPre1.toFixed(1)}</td>
+                    <td class="p-3 text-center text-indigo-900 font-bold">${totalPre2.toFixed(1)}</td>
+                    <td class="p-3 text-center text-indigo-900 font-extrabold bg-indigo-100/50">${totalActual.toFixed(1)}</td>
+                    <td class="p-3 text-center text-xs">${totalGrowthBadge}</td>
+                </tr>
+            `;
+            tbody.innerHTML = tableRowsHtml;
+
+            // วาดกราฟแท่งเปรียบเทียบคะแนนรายบุคคล พร้อมระบุป้ายส่วนต่างเดลต้าด้านบนแท่ง
+            const ctx = document.getElementById('studentTrendChart').getContext('2d');
+            if (sChart) sChart.destroy();
+            
+            const subjects = data.scores.map(s => s.subject);
+            
+            sChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: subjects,
+                    datasets: [
+                        { 
+                            label: 'Pre 1 (รอบแรกสุด)', 
+                            data: data.scores.map(s => s.pre1), 
+                            backgroundColor: '#06b6d4', // Turquoise
+                            borderRadius: 6
+                        },
+                        { 
+                            label: 'Pre 2 (รอบสอง)', 
+                            data: data.scores.map(s => s.pre2), 
+                            backgroundColor: '#f97316', // Orange
+                            borderRadius: 6
+                        },
+                        { 
+                            label: 'คะแนนสอบจริง (A-Level)', 
+                            data: data.scores.map(s => s.actual), 
+                            backgroundColor: '#8b5cf6', // Royal Purple
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    layout: {
+                        padding: { top: 25 }
+                    },
+                    plugins: { 
+                        legend: { position: 'top', labels: { font: { family: 'Sarabun' } } } 
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            max: 100, 
+                            grid: { color: '#f1f5f9' },
+                            ticks: { font: { family: 'Sarabun' } }
+                        },
+                        x: { ticks: { font: { family: 'Sarabun' } } }
+                    }
+                },
+                plugins: [{
+                    id: 'deltaLabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx, data } = chart;
+                        ctx.save();
+                        
+                        const pre1Meta = chart.getDatasetMeta(0);
+                        const pre2Meta = chart.getDatasetMeta(1);
+                        const actualMeta = chart.getDatasetMeta(2);
+                        
+                        if (pre2Meta && actualMeta) {
+                            actualMeta.data.forEach((bar, index) => {
+                                const pre1Val = data.datasets[0].data[index];
+                                const pre2Val = data.datasets[1].data[index];
+                                const actualVal = data.datasets[2].data[index];
+                                
+                                // เช็ค Fallback: ถ้า Pre 2 เป็น 0 ให้คิดเทียบ Pre 1
+                                const hasPre2 = (pre2Val !== 0 && pre2Val !== "" && pre2Val !== null);
+                                const baseline = hasPre2 ? pre2Val : pre1Val;
+                                const diff = (actualVal - baseline).toFixed(1);
+                                const diffNum = parseFloat(diff);
+                                
+                                let text = "";
+                                let color = "";
+                                if (diffNum > 0) {
+                                    text = `▲ +${diff}`;
+                                    color = '#10b981'; // เขียว
+                                } else if (diffNum < 0) {
+                                    text = `▼ ${diff}`;
+                                    color = '#ef4444'; // แดง
+                                } else {
+                                    text = ` 0.0`;
+                                    color = '#64748b'; // เทา
+                                }
+                                
+                                if (!hasPre2) text += " *";
+                                
+                                ctx.font = 'bold 10px Sarabun';
+                                ctx.fillStyle = color;
+                                ctx.textAlign = 'center';
+                                ctx.fillText(text, bar.x, bar.y - 8);
+                            });
+                        }
+                        ctx.restore();
+                    }
+                }]
+            });
+        }
+
+        // โหลดข้อมูลสถิติพรีเทส Pre-A level (Pre1 vs Pre2 ข้อมูลทั้งหมด)
+        function loadPreStats() {
+            document.getElementById('search-loading').classList.remove('hidden');
+            callApi('getPreStatsData').then(data => {
+                document.getElementById('search-loading').classList.add('hidden');
+                if (!data) return;
+                
+                const tbody = document.getElementById('table-pre-stats');
+                tbody.innerHTML = data.map(item => {
+                    const diffNum = parseFloat(item.diff);
+                    let diffBadge = "";
+                    
+                    if (diffNum > 0) {
+                        diffBadge = `<span class="inline-flex items-center gap-1 font-bold text-emerald-600"><i class="fa-solid fa-arrow-trend-up"></i>+${item.diff}</span>`;
+                    } else if (diffNum < 0) {
+                        diffBadge = `<span class="inline-flex items-center gap-1 font-bold text-rose-500"><i class="fa-solid fa-arrow-trend-down"></i>${item.diff}</span>`;
+                    } else {
+                        diffBadge = `<span class="text-slate-400 font-semibold">-</span>`;
+                    }
+                    
+                    return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="p-3 text-slate-700 font-medium">${item.subject}</td>
+                            <td class="p-3 text-center text-slate-600 font-semibold">${item.pre1Avg} <span class="text-xs font-normal text-slate-400">(${item.pre1Count} คน)</span></td>
+                            <td class="p-3 text-center text-slate-600 font-semibold">${item.pre2Avg} <span class="text-xs font-normal text-slate-400">(${item.pre2Count} คน)</span></td>
+                            <td class="p-3 text-center text-xs">${diffBadge}</td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                // วาดกราฟพรีเทสเปรียบเทียบด้วยสีสันสดใส
+                const ctx = document.getElementById('preStatsChart').getContext('2d');
+                if (pChart) pChart.destroy();
+                
+                pChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(d => d.subject),
+                        datasets: [
+                            {
+                                label: 'ค่าเฉลี่ย Pre 1',
+                                data: data.map(d => d.pre1Avg),
+                                backgroundColor: '#1d4ed8', // น้ำเงินสดใส
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'ค่าเฉลี่ย Pre 2',
+                                data: data.map(d => d.pre2Avg),
+                                backgroundColor: '#db2777', // ชมพูสดใส
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', labels: { font: { family: 'Sarabun', weight: 'bold' } } }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true, 
+                                max: 100,
+                                ticks: { font: { family: 'Sarabun' } }
+                            },
+                            x: { ticks: { font: { family: 'Sarabun' } } }
+                        }
+                    }
+                });
+            });
+        }
+
+        // โหลดข้อมูลภาพรวมวิชาการของห้องเรียน (A-Level)
+        function loadOverview() {
+            callApi('getOverviewData').then(showOverview);
+        }
+
+        function showOverview(data) {
+            if (!data) return;
+            document.getElementById('ov-count').innerText = data.studentCount + " คน";
+            
+            // ค้นหาวิชาที่ได้เฉลี่ยสูงสุดในแท็บสอบจริง
+            const actuals = data.averages.map(a => parseFloat(a.actual));
+            const maxIdx = actuals.indexOf(Math.max(...actuals));
+            const topSubject = data.averages[maxIdx];
+            document.getElementById('ov-top-sub').innerText = topSubject ? topSubject.subject : "-";
+            
+            // หาผลรวมคะแนนเฉลี่ยจริงสะสมของห้องเรียน 7 วิชา
+            const totalClassActual = data.averages.reduce((sum, a) => sum + parseFloat(a.actual), 0);
+            document.getElementById('ov-avg-total').innerText = totalClassActual.toFixed(1) + " คะแนน";
+
+            // วาดกราฟภาพรวมด้วยชุดสีสันสว่างสดใส (Vibrant Colorful Palette) ตามที่คุณต้องการ
+            const ctx = document.getElementById('overviewBarChart').getContext('2d');
+            if (oChart) oChart.destroy();
+            
+            oChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.averages.map(a => a.subject),
+                    datasets: [
+                        { 
+                            label: 'ค่าเฉลี่ย Pre 1', 
+                            data: data.averages.map(a => a.pre1), 
+                            backgroundColor: '#38bdf8', // ฟ้าสว่าง (Vibrant Sky Blue)
+                            borderRadius: 6
+                        },
+                        { 
+                            label: 'ค่าเฉลี่ย Pre 2', 
+                            data: data.averages.map(a => a.pre2), 
+                            backgroundColor: '#fb7185', // ชมพูคอรัล (Vibrant Coral Rose)
+                            borderRadius: 6
+                        },
+                        { 
+                            label: 'ค่าเฉลี่ย สอบจริง (A-Level)', 
+                            data: data.averages.map(a => a.actual), 
+                            backgroundColor: '#4ade80', // เขียวนีออนสว่าง (Neon Green)
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'top', labels: { font: { family: 'Sarabun', weight: 'bold' } } } 
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true, 
+                            max: 100,
+                            ticks: { font: { family: 'Sarabun' } }
+                        },
+                        x: { ticks: { font: { family: 'Sarabun' } } }
+                    }
+                }
+            });
         }
     </script>
 </body>
